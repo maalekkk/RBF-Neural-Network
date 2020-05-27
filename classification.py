@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import os
 
 filename = str("data/iris.csv")
-dataTrain = np.genfromtxt(filename, delimiter=',', dtype=['<f8', '<f8', '<f8', '<f8', 'U15'],
+data_training = np.genfromtxt(filename, delimiter=',', dtype=['<f8', '<f8', '<f8', '<f8', 'U15'],
                           names=('sepal length', 'sepal width', 'petal length', 'petal width', 'label'))
 
 # Create target Directory
@@ -17,23 +17,23 @@ except FileExistsError:
 
 
 # division data to train_data and test_data
-def data_division(data_train, train_data_percent):
-    amount_of_data_types = len(data_train) / 3
+def data_division(data_training, train_data_percent):
+    amount_of_data_types = len(data_training) / 3
     division = round(amount_of_data_types * train_data_percent)
     data_train = []
     data_test = []
     for i in range(0, division):
-        data_train.append(data_train[i])
+        data_train.append(data_training[i])
     for i in range(division, round(amount_of_data_types)):
-        data_test.append(data_train[i])
+        data_test.append(data_training[i])
     for i in range(round(amount_of_data_types), round(amount_of_data_types) + division):
-        data_train.append(data_train[i])
+        data_train.append(data_training[i])
     for i in range(round(amount_of_data_types) + division, round(amount_of_data_types) * 2):
-        data_test.append(data_train[i])
+        data_test.append(data_training[i])
     for i in range(round(amount_of_data_types) * 2, round(amount_of_data_types) * 2 + division):
-        data_train.append(data_train[i])
+        data_train.append(data_training[i])
     for i in range(round(amount_of_data_types) * 2 + division, len(data_train)):
-        data_test.append(data_train[i])
+        data_test.append(data_training[i])
     return data_train, data_test
 
 
@@ -84,21 +84,22 @@ def change_to_iris_name(pred, correct_p):
         result = 'Iris-versicolor'
     elif pred[2] > correct_p:
         result = 'Iris-virginica'
+    else:
+        print(pred, ' bad prediction')
     return result
 
 
 # fitting RBF-Network with data
 model = rbf.RBF(hidden_shape=10, sigma=1.)
-data_train, data_test = data_division(dataTrain, 0.07)
-print(data_train)
+data_train, data_test = data_division(data_training, 0.8)
 data_train_conv = transform_data(data_train, len(data_train), 4, 3)
 data_test_conv = transform_data(data_test, len(data_test), 4, 3)
 model.fit(data_train_conv[:, 0:4], data_train_conv[:, 4:7])
 y_predict = model.predict(data_test_conv[:, 0:4])
 result = 0
 for i in range(len(data_test_conv)):
-    origin = change_to_iris_name(y_predict[i], 0.95)
-    pred = change_to_iris_name(data_test_conv[i, 4:7], 0.95)
+    origin = change_to_iris_name(y_predict[i], 0.80)
+    pred = change_to_iris_name(data_test_conv[i, 4:7], 0.80)
     if origin == pred:
         result += 1
     print(data_test_conv[i, 0:4], " : ", origin, " = ", pred)
