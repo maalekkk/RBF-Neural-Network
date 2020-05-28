@@ -94,7 +94,7 @@ model = rbf.RBF(hidden_shape=10, sigma=1.)
 data_train, data_test = data_division(data_training, 0.8)
 data_train_conv = transform_data(data_train, len(data_train), 4, 3)
 data_test_conv = transform_data(data_test, len(data_test), 4, 3)
-model.fit(data_train_conv[:, 0:4], data_train_conv[:, 4:7])
+model.fit_two_stages(data_train_conv[:, 0:4], data_train_conv[:, 4:7])
 y_predict = model.predict(data_test_conv[:, 0:4])
 result = 0
 for i in range(len(data_test_conv)):

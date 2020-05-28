@@ -20,7 +20,7 @@ class RBF:
                     center, data_point)
         return G
 
-    def fit(self, X, Y):
+    def fit_two_stages(self, X, Y):
         self.centers = kmeans(X, self.hidden_shape)
         G = self._calculate_interpolation_matrix(X)
         self.weights = np.dot(np.linalg.pinv(G), Y)
