@@ -90,11 +90,11 @@ def change_to_iris_name(pred, correct_p):
 
 
 # fitting RBF-Network with data
-model = rbf.RBF(hidden_shape=10, sigma=1.)
+model = rbf.RBF(hidden_neurons=10, random_centroids=False)
 data_train, data_test = data_division(data_training, 0.8)
 data_train_conv = transform_data(data_train, len(data_train), 4, 3)
 data_test_conv = transform_data(data_test, len(data_test), 4, 3)
-model.fit_two_stages(data_train_conv[:, 0:4], data_train_conv[:, 4:7])
+model.fit_two_stages(data_train_conv[:, 0:4], data_train_conv[:, 4:7], False)
 y_predict = model.predict(data_test_conv[:, 0:4])
 result = 0
 for i in range(len(data_test_conv)):

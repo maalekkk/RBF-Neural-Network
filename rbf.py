@@ -1,60 +1,60 @@
+from copy import deepcopy
+
 import numpy as np
 from kMeans import kmeans
 
 
 class RBF:
-    def __init__(self, hidden_shape, random_centroids):
-        self.hidden_shape = hidden_shape
+    def __init__(self, hidden_neurons, random_centroids):
+        self.hidden_neurons = hidden_neurons
         self.centers = None
-        self.weights = None
         self.stds = None
+        self.weights = np.random.uniform(-1, 1, self.hidden_neurons)
         self.random_centroids = random_centroids
-        self.w = np.random.randn(self.hidden_shape)
 
     def _kernel_function(self, center, data_point, sigma, coefficient):
-        beta = 2 * (sigma ** 2) * coefficient
-        return np.exp(-np.linalg.norm(center - data_point) ** 2 / beta)
+        beta = coefficient / (2 * (sigma ** 2))
+        return np.exp(-np.linalg.norm(center - data_point) ** 2 * beta)
 
-    def _calculate_interpolation_matrix(self, X, coefficient):
-        G = np.zeros((len(X), self.hidden_shape))
+    def _calculate_interpolation_matrix(self, X, coefficient=1):
+        G = np.zeros((len(X), self.hidden_neurons))
         for data_point_arg, data_point in enumerate(X):
             for center_arg, center in enumerate(self.centers):
                 G[data_point_arg, center_arg] = self._kernel_function(
                     center, data_point, self.stds[center_arg], coefficient)
         return G
 
-    # def _calculate_sigma(self):
-    #     dMax = max([np.abs(c1 - c2) for c1 in self.centers for c2 in self.centers])
-    #     self.stds = np.repeat(dMax / np.sqrt(2 * self.k), self.k)
-
-    def fit_two_stages(self, X, Y, backward_propagation, coefficient, l_rate=0.001):
-        self.centers, self.stds = kmeans(X, self.hidden_shape, self.random_centroids)
-        G = self._calculate_interpolation_matrix(X, coefficient)
+    def fit_two_stages(self, X, Y, backward_propagation, coefficient=1, l_rate=0.2, b_rate=0.2):
+        # self.centers, self.stds = kmeans(X, self.hidden_neurons, self.random_centroids)
+        # self.centers = X[np.random.choice(range(len(X)), self.hidden_neurons, replace=False)]
+        self.centers, self.stds = kmeans(X, self.hidden_neurons, max_iters=1000)
         if backward_propagation:
-            self.weights = np.random.uniform(-1, 1, self.hidden_shape)
             error = 2
-            while error > 1:
-                derivative = np.zeros(self.hidden_shape)
+            # while error > 0.3:
+            for i in range(1000):
+                self.previousWeights = deepcopy(self.weights)
+                derivative = np.zeros(self.hidden_neurons)
                 error = 0
-                for i in range(len(X)):
-                    output = self.predict(X[i], coefficient)
-                    error += (output - Y[i]) ** 2
-                    for weight_idx, weight in enumerate(self.weights):
-                        derivative[weight_idx] += (output - Y[i]) * self._kernel_function(self.centers[weight_idx],
-                                                                                          X[i], self.stds[weight_idx],
-                                                                                          coefficient)
+                for j in range(len(X)):
+                    output = self.predict(X[j], coefficient)
+                    error += (output - Y[j]) ** 2
+                    for k in range(len(self.weights)):
+                        derivative[k] += (output - Y[j]) * self._kernel_function(self.centers[k],
+                                                                                 X[j], self.stds[k],
+                                                                                 coefficient)
                 derivative /= len(X)
                 error /= len(X) * 2
-                print(error)
-                for i in range(len(self.weights)):
-                    self.weights[i] -= l_rate * derivative[i]
+                if i % 10 == 0:
+                    print(error)
+                for j in range(len(self.weights)):
+                    momentum = self.weights[j] - self.previousWeights[j]
+                    self.weights[j] -= l_rate * derivative[j] + b_rate * momentum
         else:
+            G = self._calculate_interpolation_matrix(X)
             self.weights = np.dot(np.linalg.pinv(G), Y)
+            print(self.weights)
 
-    def predict(self, X, coefficient):
+    def predict(self, X, coefficient=1):
         G = self._calculate_interpolation_matrix(X, coefficient)
         predictions = np.dot(G, self.weights)
         return predictions
-
-    def fit_one_stages(self, approx_1_train_x, approx_1_train_y):
-        pass

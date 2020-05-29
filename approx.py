@@ -48,12 +48,12 @@ approx_1_train_y = approx_1[:, 1, np.newaxis]
 #
 #
 # # fitting RBF-Network with data
-model = rbf.RBF(hidden_shape=21)
+model = rbf.RBF(hidden_neurons=21, random_centroids=False)
 
 # model.fit_two_stages(approx_1_train_x, approx_1_train_y, True)
 # y_pred = model.predict(approx_test[:, 0])
 
-model.fit_two_stages(approx_1_train_x, approx_1_train_y, True)
+model.fit_two_stages(approx_1_train_x, approx_1_train_y, False)
 y_pred = model.predict(approx_test[:, 0])
 
 plt.scatter(approx_1_train_x, approx_1_train_y, c='red', s=2, label='real')
