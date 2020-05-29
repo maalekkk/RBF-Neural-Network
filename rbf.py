@@ -5,12 +5,11 @@ from kMeans import kmeans
 
 
 class RBF:
-    def __init__(self, hidden_neurons, random_centroids):
+    def __init__(self, hidden_neurons):
         self.hidden_neurons = hidden_neurons
         self.centers = None
         self.stds = None
         self.weights = np.random.uniform(-1, 1, self.hidden_neurons)
-        self.random_centroids = random_centroids
 
     def _kernel_function(self, center, data_point, sigma, coefficient):
         beta = coefficient / (2 * (sigma ** 2))
@@ -24,14 +23,20 @@ class RBF:
                     center, data_point, self.stds[center_arg], coefficient)
         return G
 
+    def get_distance(self, x1, x2):
+        sum = 0
+        for i in range(len(x1)):
+            sum += (x1[i] - x2[i]) ** 2
+        return np.sqrt(sum)
+
     def fit_two_stages(self, X, Y, backward_propagation, coefficient=1, l_rate=0.2, b_rate=0.2):
-        # self.centers, self.stds = kmeans(X, self.hidden_neurons, self.random_centroids)
-        # self.centers = X[np.random.choice(range(len(X)), self.hidden_neurons, replace=False)]
-        self.centers, self.stds = kmeans(X, self.hidden_neurons, max_iters=1000)
+        self.centers = kmeans(X, self.hidden_neurons, max_iters=1000)
+        dMax = np.max([self.get_distance([c1], [c2]) for c1 in self.centers for c2 in self.centers])
+        self.stds = np.repeat(dMax / np.sqrt(2 * self.hidden_neurons), self.hidden_neurons)
         if backward_propagation:
             error = 2
             # while error > 0.3:
-            for i in range(1000):
+            for i in range(5000):
                 self.previousWeights = deepcopy(self.weights)
                 derivative = np.zeros(self.hidden_neurons)
                 error = 0
