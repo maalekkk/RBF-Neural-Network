@@ -21,37 +21,71 @@ def nodes(dataset, num_of_nodes):
     return nodes_weights
 
 
-def get_distance(x1, x2):
-    sum = 0
-    for i in range(len(x1)):
-        sum += (x1[i] - x2[i]) ** 2
-    return np.sqrt(sum)
+# def get_distance(x1, x2):
+#     sum = 0
+#     for i in range(len(x1)):
+#         sum += (x1[i] - x2[i]) ** 2
+#     return np.sqrt(sum)
 
 
-def kmeans(X, k):
-    randoms = np.random.choice(range(len(X)), k, replace=False)
-    centroids = []
-    for i in randoms:
-        centroids.append(X[i])
-    # centroids = X[np.random.choice(range(len(X)), k, replace=False)]
+def kmeans(X, k, random):
+    """Performs k-means clustering for 1D input
 
-    # centroids = nodes(X, k)
+    Arguments:
+        X {ndarray} -- A Mx1 array of inputs
+        k {int} -- Number of clusters
 
+    Returns:
+        ndarray -- A kx1 array of final cluster centers
+    """
+
+    # randomly select initial clusters from input data
+    clusters = np.random.choice(np.squeeze(X), size=k)
+    prevClusters = clusters.copy()
+    stds = np.zeros(k)
     converged = False
-    current_iter = 0
-    while (not converged):
-        cluster_list = [[] for i in range(len(centroids))]
-        for x in X:  # Go through each data point
-            distances_list = []
-            for c in centroids:
-                distances_list.append(get_distance(c, x))
-            cluster_list[int(np.argmin(distances_list))].append(x)
-        cluster_list = list((filter(None, cluster_list)))
-        prev_centroids = centroids.copy()
-        centroids = []
-        for j in range(len(cluster_list)):
-            centroids.append(np.mean(cluster_list[j], axis=0))
-        pattern = np.abs(np.sum(prev_centroids) - np.sum(centroids))
-        converged = (pattern == 0)
-        current_iter += 1
-    return np.array(centroids)
+    if not random:
+        while not converged:
+            """
+            compute distances for each cluster center to each point 
+            where (distances[i, j] represents the distance between the ith point and jth cluster)
+            """
+            distances = np.squeeze(np.abs(X[:, np.newaxis] - clusters[np.newaxis, :]))
+
+            # find the cluster that's closest to each point
+            closestCluster = np.argmin(distances, axis=1)
+
+            # update clusters by taking the mean of all of the points assigned to that cluster
+            for i in range(k):
+                pointsForCluster = X[closestCluster == i]
+                if len(pointsForCluster) > 0:
+                    clusters[i] = np.mean(pointsForCluster, axis=0)
+
+            # converge if clusters haven't moved
+            converged = np.linalg.norm(clusters - prevClusters) < 1e-6
+            prevClusters = clusters.copy()
+
+    distances = np.squeeze(np.abs(X[:, np.newaxis] - clusters[np.newaxis, :]))
+    closestCluster = np.argmin(distances, axis=1)
+
+    clustersWithNoPoints = []
+
+    for i in range(k):
+        pointsForCluster = X[closestCluster == i]
+        if len(pointsForCluster) < 2:
+            # keep track of clusters with no points or 1 point
+            clustersWithNoPoints.append(i)
+            continue
+        else:
+            stds[i] = np.std(X[closestCluster == i])
+
+    # if there are clusters with 0 or 1 points, take the mean std of the other clusters
+    if len(clustersWithNoPoints) > 0:
+        pointsToAverage = []
+        for i in range(k):
+            if i not in clustersWithNoPoints:
+                pointsToAverage.append(X[closestCluster == i])
+        pointsToAverage = np.concatenate(pointsToAverage).ravel()
+        stds[clustersWithNoPoints] = np.mean(np.std(pointsToAverage))
+
+    return clusters, stds
