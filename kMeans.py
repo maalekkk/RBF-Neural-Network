@@ -2,19 +2,19 @@ import numpy as np
 
 
 def get_distance(x1, x2):
-    sum = 0
+    s = 0
     for i in range(len(x1)):
-        sum += (x1[i] - x2[i]) ** 2
-    return np.sqrt(sum)
+        s += (x1[i] - x2[i]) ** 2
+    return np.sqrt(s)
 
 
-def kmeans(X, k, max_iters):
-    centroids = X[np.random.choice(range(len(X)), k, replace=False)]
+def k_means(data, num_of_centers):
+    centroids = data[np.random.choice(range(len(data)), num_of_centers)]
     converged = False
     current_iter = 0
-    while (not converged) and (current_iter < max_iters):
+    while (not converged) and (current_iter < 1000):
         cluster_list = [[] for i in range(len(centroids))]
-        for x in X:
+        for x in data:
             distances_list = []
             for c in centroids:
                 distances_list.append(get_distance(c, x))

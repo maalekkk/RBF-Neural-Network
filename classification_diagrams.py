@@ -1,11 +1,15 @@
+import csv
+from sklearn import datasets
 import numpy as np
+from mlxtend.plotting import plot_decision_regions
+
 import rbf
 import matplotlib.pyplot as plt
 import os
 
 filename = str("data/iris.csv")
-data_training = np.genfromtxt(filename, delimiter=',', dtype=['<f8', '<f8', '<f8', '<f8', 'U15'],
-                          names=('sepal length', 'sepal width', 'petal length', 'petal width', 'label'))
+iris = np.genfromtxt(filename, delimiter=',', dtype=['<f8', '<f8', '<f8', '<f8', 'U15'],
+                     names=('sepal length', 'sepal width', 'petal length', 'petal width', 'label'))
 
 # Create target Directory
 path = "results/classification"
@@ -89,19 +93,141 @@ def change_to_iris_name(pred, correct_p):
     return result
 
 
-# fitting RBF-Network with data
-model = rbf.RBF(hidden_neurons=10, random_centroids=False)
-data_train, data_test = data_division(data_training, 0.8)
-data_train_conv = transform_data(data_train, len(data_train), 4, 3)
-data_test_conv = transform_data(data_test, len(data_test), 4, 3)
-model.fit_two_stages(data_train_conv[:, 0:4], data_train_conv[:, 4:7], False)
-y_predict = model.predict(data_test_conv[:, 0:4])
-result = 0
-for i in range(len(data_test_conv)):
-    origin = change_to_iris_name(y_predict[i], 0.80)
-    pred = change_to_iris_name(data_test_conv[i, 4:7], 0.80)
-    if origin == pred:
-        result += 1
-    print(data_test_conv[i, 0:4], " : ", origin, " = ", pred)
-result = result / len(data_test_conv) * 100
-print('Result: ', result, "%")
+def change_iris_name_to_int(data_train, data_test):
+    x = []
+    y = []
+    for row in data_train:
+        if row[-1] == 'Iris-setosa':
+            x.append(1)
+        elif row[-1] == 'Iris-versicolor':
+            x.append(2)
+        elif row[-1] == 'Iris-virginica':
+            x.append(3)
+    for row in data_test:
+        if row[-1] == 'Iris-setosa':
+            y.append(1)
+        elif row[-1] == 'Iris-versicolor':
+            y.append(2)
+        elif row[-1] == 'Iris-virginica':
+            y.append(3)
+    return x, y
+
+def accuracy_test(data_test, network):
+    y_predict = network.predict(data_test[:, :-3])
+    result = 0
+    for i in range(len(data_test)):
+        origin = change_to_iris_name(y_predict[i], 0.7)
+        pred = change_to_iris_name(data_test[i, -3:], 0.7)
+        if origin == pred:
+            result += 1
+        print(data_test[i, :], " : ", origin, " = ", pred)
+    result = result / len(data_test) * 100
+    print('Result: ', result, "%")
+    return result
+
+
+def classification_accuracy(train_data, test_data, columns):
+    plt.title("Classification accuracy\n" +
+              "(number of inputs " + str(len(columns)) + ", columns " + str(columns) + ")")
+    plt.xlabel('number of radial neurons')
+    plt.ylabel('accuracy')
+    plt.grid(alpha=.4, linestyle='--')
+    x = [0, 1, 11, 21, 31, 41]
+    y = [0]
+    for n_neurons in range(1, 42, 10):
+        net = rbf.RBF(n_neurons)
+        net.fit_two_stages(train_data[:, :-3], train_data[:, -3:], False)
+        y.append(accuracy_test(test_data, net))
+    plt.plot(x, y, label='train data', alpha=0.8)
+    y = [0]
+    for n_neurons in range(1, 42, 10):
+        net = rbf.RBF(n_neurons)
+        net.fit_two_stages(test_data[:, :-3], test_data[:, -3:], False)
+        y.append(accuracy_test(test_data, net))
+    plt.plot(x, y, label='test data', alpha=0.8)
+    plt.legend()
+    plt.savefig(
+        'results/classification/classification_accuracy_' + str(len(columns)) + '_inputs_c' + str(columns) + '.png')
+    plt.clf()
+
+
+def classification_test_table(data_test, data_train):
+    test_dataset = transform_data(data_test, len(data_test), 4, 3)
+    train_dataset = transform_data(data_train, len(data_train), 4, 3)
+    with open('results/classification/classification_effect_table.txt', 'w', newline='') as fileOut:
+        writer = csv.writer(fileOut, delimiter=' ', quotechar=' ', quoting=csv.QUOTE_MINIMAL)
+        writer.writerow(
+            ['hidden_neurons', 'train_accuracy', 'st_d_train', 'test_accuracy', 'st_d_test'])
+        for i in range(1, 42, 5):
+            acc_train = []
+            acc_test = []
+            for j in range(100):
+                network = rbf.RBF(i)
+                network.fit_two_stages(train_dataset[:, :-3], train_dataset[:, -3:], False)
+                acc_train.append(accuracy_test(train_dataset, network))
+                acc_test.append(accuracy_test(test_dataset, network))
+            writer.writerow([i + 1, round(np.average(acc_train), 1), round(np.std(acc_train), 2),
+                             round(np.average(acc_test), 1), round(np.std(acc_test), 2)])
+
+
+def decision_boundaries():
+    for i in range(3):
+        for j in range(i + 1, 4):
+            columns = [i, j]
+            plt.title("Distribution of points for inputs number " + str(i + 1) + " and " + str(j + 1))
+            plt.xlabel('input ' + str(i + 1))
+            plt.ylabel('input ' + str(j + 1))
+            plt.grid(alpha=.4, linestyle='--')
+            iris = datasets.load_iris()
+            X = iris.data[:, columns]
+            y = iris.target
+            network = rbf.RBF(31)
+            network.fit_two_stages(X, y, False)
+            # Plotting decision regions
+            plot_decision_regions(X, y, clf=network, legend=2)
+            plt.savefig('results/classification/2222distribution_input_' + str(i + 1) + '_and_' + str(j + 1))
+            plt.clf()
+
+
+data_train, data_test = data_division(iris, 0.8)
+
+# Task 1
+
+# Testing neural network with 1 Input
+for i in range(4):
+    print("Testing neural network with 1 Input, for data column " + str(i))
+    training_data = transform_data(data_train, len(data_train), 1, 3, [i])
+    test_data = transform_data(data_test, len(data_test), 1, 3, [i])
+    classification_accuracy(training_data, test_data, [i])
+
+# Testing neural network with 2 Inputs
+for i in range(4):
+    for j in range(i + 1, 4):
+        print("Testing neural network with 2 Inputs, for data columns [" + str(i) + ", " + str(j) + "]")
+        training_data = transform_data(data_train, len(data_train), 2, 3, [i, j])
+        test_data = transform_data(data_test, len(data_test), 2, 3, [i, j])
+        classification_accuracy(training_data, test_data, [i, j])
+
+# Testing neural network with 3 Inputs
+for i in range(4):
+    for j in range(i + 1, 4):
+        for k in range(j + 1, 4):
+            print("Testing neural network with 3 Inputs, for data columns [" + str(i) + ", " + str(j) + ", " + str(
+                k) + "]")
+            training_data = transform_data(data_train, len(data_train), 3, 3, [i, j, k])
+            test_data = transform_data(data_test, len(data_test), 3, 3, [i, j, k])
+            classification_accuracy(training_data, test_data, [i, j, k])
+
+# Testing neural network with 4 Inputs
+print("Testing neural network with 4 Inputs, for data columns [0,1,2,3]")
+training_data = transform_data(data_train, len(data_train), 4, 3)
+test_data = transform_data(data_test, len(data_test), 4, 3)
+classification_accuracy(training_data, test_data, [0, 1, 2, 3])
+
+# Task 2
+
+# classification_test_table(data_test, data_train)
+
+# Task 3
+
+# decision_boundaries()
