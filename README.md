@@ -1,10 +1,13 @@
 # RBF Neural Network
 
 ### Description
-Implementation of RBF.
+Implementation of RBF neural network.
 
 ### Subject
 Subject: Intelligent data analysis.
 
+### Programming language
+Python
+
 ### Date
-2020
+Winter 2020
